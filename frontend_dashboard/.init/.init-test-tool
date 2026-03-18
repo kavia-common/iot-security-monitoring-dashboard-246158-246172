@@ -1,2 +1,2 @@
-{ "working_directory": "/home/kavia/workspace/code-generation",
- "command": "npm run test" }
+{ "working_directory": "/home/kavia/workspace/code-generation/iot-security-monitoring-dashboard-246158-246172/frontend_dashboard",
+ "command": "npm test -- --ci --watchAll=false" }
