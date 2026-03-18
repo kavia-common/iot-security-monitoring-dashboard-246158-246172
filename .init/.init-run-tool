@@ -1,0 +1,4 @@
+{
+    "command": "PORT=<port> HOST=<host> BROWSER=none npm start",
+    "working_directory": "/home/kavia/workspace/code-generation/iot-security-monitoring-dashboard-246158-246172/frontend_dashboard"
+}

@@ -1,0 +1,10 @@
+/* Global base styles. The dashboard design system lives in App.css */
+html,
+body {
+  padding: 0;
+  margin: 0;
+}
+
+a {
+  color: inherit;
+}
