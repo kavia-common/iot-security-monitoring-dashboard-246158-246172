@@ -1,8 +1,10 @@
-import { render, screen } from '@testing-library/react';
-import App from './App';
+import { render, screen } from "@testing-library/react";
+import App from "./App";
 
-test('renders learn react link', () => {
+test("renders dashboard navigation", () => {
   render(<App />);
-  const linkElement = screen.getByText(/learn react/i);
-  expect(linkElement).toBeInTheDocument();
+  expect(screen.getByText(/IOT SEC MONITOR/i)).toBeInTheDocument();
+  expect(screen.getByText(/Dashboard/i)).toBeInTheDocument();
+  expect(screen.getByText(/Devices/i)).toBeInTheDocument();
+  expect(screen.getByText(/Event Logs/i)).toBeInTheDocument();
 });
