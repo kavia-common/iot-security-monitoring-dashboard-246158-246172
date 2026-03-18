@@ -27,6 +27,7 @@ function safeSave(state) {
       simulation: state.simulation,
       devices: state.devices,
       events: state.events,
+      alertStatusByEventId: state.alertStatusByEventId,
     };
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
   } catch {
@@ -41,6 +42,8 @@ function buildInitialState() {
     simulation: { enabled: true, intervalMs: 4500 },
     devices: DEFAULT_DEVICES,
     events: [],
+    // Alert lifecycle: eventId -> status
+    alertStatusByEventId: {},
     toasts: [],
   };
 
@@ -58,6 +61,10 @@ function capEvents(events, max = 500) {
   return events.slice(events.length - max);
 }
 
+function isAlertEvent(event) {
+  return event?.severity === "warning" || event?.severity === "critical";
+}
+
 function reducer(state, action) {
   switch (action.type) {
     case "SET_THEME": {
@@ -70,9 +77,7 @@ function reducer(state, action) {
       const { deviceId } = action.payload;
       return {
         ...state,
-        devices: state.devices.map((d) =>
-          d.id === deviceId ? { ...d, online: !d.online, lastSeenAt: nowMs() } : d
-        ),
+        devices: state.devices.map((d) => (d.id === deviceId ? { ...d, online: !d.online, lastSeenAt: nowMs() } : d)),
       };
     }
     case "UPDATE_DEVICE": {
@@ -92,11 +97,23 @@ function reducer(state, action) {
       const events = capEvents([...state.events, event]);
       const toasts = toast ? [...state.toasts, toast] : state.toasts;
 
-      return { ...state, devices, events, toasts };
+      // New warning/critical events start as Active by default.
+      const alertStatusByEventId = isAlertEvent(event)
+        ? { ...state.alertStatusByEventId, [event.id]: "active" }
+        : state.alertStatusByEventId;
+
+      return { ...state, devices, events, toasts, alertStatusByEventId };
     }
     case "DISMISS_TOAST": {
       const { toastId } = action.payload;
       return { ...state, toasts: state.toasts.filter((t) => t.id !== toastId) };
+    }
+    case "SET_ALERT_STATUS": {
+      const { eventId, status } = action.payload;
+      return {
+        ...state,
+        alertStatusByEventId: { ...state.alertStatusByEventId, [eventId]: status },
+      };
     }
     default:
       return state;
@@ -158,6 +175,18 @@ export function AppStateProvider({ children }) {
     dispatch({ type: "ADD_EVENT", payload: { event, devicePatch, toast } });
   }, []);
 
+  const setAlertStatus = useCallback((eventId, status) => {
+    dispatch({ type: "SET_ALERT_STATUS", payload: { eventId, status } });
+  }, []);
+
+  const acknowledgeAlert = useCallback((eventId) => {
+    dispatch({ type: "SET_ALERT_STATUS", payload: { eventId, status: "acknowledged" } });
+  }, []);
+
+  const resolveAlert = useCallback((eventId) => {
+    dispatch({ type: "SET_ALERT_STATUS", payload: { eventId, status: "resolved" } });
+  }, []);
+
   // Simulated realtime events
   useEffect(() => {
     if (!state.simulation.enabled) return;
@@ -180,6 +209,9 @@ export function AppStateProvider({ children }) {
         simulateEvent,
         toggleDeviceOnline,
         updateDevice,
+        setAlertStatus,
+        acknowledgeAlert,
+        resolveAlert,
       },
     };
   }, [
@@ -191,6 +223,9 @@ export function AppStateProvider({ children }) {
     simulateEvent,
     toggleDeviceOnline,
     updateDevice,
+    setAlertStatus,
+    acknowledgeAlert,
+    resolveAlert,
   ]);
 
   return <AppStateContext.Provider value={api}>{children}</AppStateContext.Provider>;

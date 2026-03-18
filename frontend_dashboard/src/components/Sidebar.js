@@ -6,6 +6,10 @@ function navClass({ isActive }) {
   return `nav-link ${isActive ? "active" : ""}`;
 }
 
+function isAlertEvent(e) {
+  return e?.severity === "warning" || e?.severity === "critical";
+}
+
 // PUBLIC_INTERFACE
 export function Sidebar({ open, onClose }) {
   /**
@@ -15,9 +19,15 @@ export function Sidebar({ open, onClose }) {
 
   const alertCount = useMemo(() => {
     const cutoff = Date.now() - 30 * 60 * 1000;
-    return state.events.filter((e) => e.ts >= cutoff && (e.severity === "warning" || e.severity === "critical"))
-      .length;
-  }, [state.events]);
+    return state.events.filter((e) => {
+      if (!e || typeof e.ts !== "number") return false;
+      if (e.ts < cutoff) return false;
+      if (!isAlertEvent(e)) return false;
+      const status = state.alertStatusByEventId?.[e.id] || "active";
+      // Default behavior: exclude Resolved; count Active + Acknowledged.
+      return status !== "resolved";
+    }).length;
+  }, [state.events, state.alertStatusByEventId]);
 
   const onlineCount = useMemo(() => state.devices.filter((d) => d.online).length, [state.devices]);
 

@@ -1,6 +1,10 @@
 import React, { useMemo } from "react";
 import { useAppState } from "../state/AppStateContext";
 
+function isAlertEvent(e) {
+  return e?.severity === "warning" || e?.severity === "critical";
+}
+
 // PUBLIC_INTERFACE
 export function TopBar({ title, onToggleSidebar }) {
   /**
@@ -10,9 +14,15 @@ export function TopBar({ title, onToggleSidebar }) {
 
   const activeAlerts = useMemo(() => {
     const cutoff = Date.now() - 15 * 60 * 1000;
-    return state.events.filter((e) => e.ts >= cutoff && (e.severity === "warning" || e.severity === "critical"))
-      .length;
-  }, [state.events]);
+    return state.events.filter((e) => {
+      if (!e || typeof e.ts !== "number") return false;
+      if (e.ts < cutoff) return false;
+      if (!isAlertEvent(e)) return false;
+      const status = state.alertStatusByEventId?.[e.id] || "active";
+      // Default behavior: exclude Resolved; count Active + Acknowledged.
+      return status !== "resolved";
+    }).length;
+  }, [state.events, state.alertStatusByEventId]);
 
   return (
     <header className="topbar" aria-label="Top bar">

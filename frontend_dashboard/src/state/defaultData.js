@@ -37,6 +37,21 @@ function clampArray(value, max) {
   return value.slice(value.length - max);
 }
 
+function isValidAlertStatus(value) {
+  return value === "active" || value === "acknowledged" || value === "resolved";
+}
+
+function sanitizeAlertStatusByEventId(value) {
+  if (!isPlainObject(value)) return {};
+  const out = {};
+  for (const [k, v] of Object.entries(value)) {
+    if (typeof k !== "string") continue;
+    if (!isValidAlertStatus(v)) continue;
+    out[k] = v;
+  }
+  return out;
+}
+
 // PUBLIC_INTERFACE
 export function clampPersistedState(value) {
   /**
@@ -48,18 +63,21 @@ export function clampPersistedState(value) {
   const simulation = isPlainObject(value.simulation)
     ? {
         enabled: Boolean(value.simulation.enabled),
-        intervalMs:
-          typeof value.simulation.intervalMs === "number" ? value.simulation.intervalMs : 4500,
+        intervalMs: typeof value.simulation.intervalMs === "number" ? value.simulation.intervalMs : 4500,
       }
     : { enabled: true, intervalMs: 4500 };
 
   const devices = Array.isArray(value.devices) && value.devices.length > 0 ? value.devices : null;
   const events = clampArray(value.events, 500);
 
+  // Alert lifecycle persistence: map of eventId -> status (active|acknowledged|resolved)
+  const alertStatusByEventId = sanitizeAlertStatusByEventId(value.alertStatusByEventId);
+
   return {
     theme,
     simulation,
     devices: devices || DEFAULT_DEVICES,
     events,
+    alertStatusByEventId,
   };
 }

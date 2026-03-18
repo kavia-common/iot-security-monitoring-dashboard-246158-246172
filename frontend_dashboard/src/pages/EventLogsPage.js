@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { useAppState } from "../state/AppStateContext";
-import { formatTimestamp, minutesAgoToCutoff } from "../utils/time";
+import { formatAlertStatus, formatTimestamp, minutesAgoToCutoff } from "../utils/time";
 
 const TIME_RANGES = [
   { value: "15m", label: "Last 15 minutes", cutoff: () => minutesAgoToCutoff(15) },
@@ -13,6 +13,10 @@ function severityClass(sev) {
   if (sev === "critical") return "badge critical";
   if (sev === "warning") return "badge warning";
   return "badge info";
+}
+
+function isAlertEvent(e) {
+  return e?.severity === "warning" || e?.severity === "critical";
 }
 
 // PUBLIC_INTERFACE
@@ -59,12 +63,7 @@ export function EventLogsPage() {
               <label className="label" htmlFor="typeFilter">
                 Event Type
               </label>
-              <select
-                id="typeFilter"
-                className="select"
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value)}
-              >
+              <select id="typeFilter" className="select" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
                 {eventTypes.map((t) => (
                   <option key={t} value={t}>
                     {t === "all" ? "All types" : t}
@@ -115,21 +114,27 @@ export function EventLogsPage() {
                     <th style={{ width: 150 }}>Device</th>
                     <th style={{ width: 190 }}>Type</th>
                     <th style={{ width: 120 }}>Severity</th>
+                    <th style={{ width: 150 }}>Alert Status</th>
                     <th>Message</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((e) => (
-                    <tr key={e.id}>
-                      <td className="mono">{formatTimestamp(e.ts)}</td>
-                      <td>{e.deviceName}</td>
-                      <td className="mono">{e.type}</td>
-                      <td>
-                        <span className={severityClass(e.severity)}>{e.severity.toUpperCase()}</span>
-                      </td>
-                      <td>{e.message}</td>
-                    </tr>
-                  ))}
+                  {filtered.map((e) => {
+                    const status = isAlertEvent(e) ? state.alertStatusByEventId?.[e.id] || "active" : null;
+
+                    return (
+                      <tr key={e.id}>
+                        <td className="mono">{formatTimestamp(e.ts)}</td>
+                        <td>{e.deviceName}</td>
+                        <td className="mono">{e.type}</td>
+                        <td>
+                          <span className={severityClass(e.severity)}>{e.severity.toUpperCase()}</span>
+                        </td>
+                        <td className="mono">{formatAlertStatus(status)}</td>
+                        <td>{e.message}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

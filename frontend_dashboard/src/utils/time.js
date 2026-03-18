@@ -33,3 +33,14 @@ export function minutesAgoToCutoff(minutes) {
    */
   return Date.now() - minutes * 60 * 1000;
 }
+
+// PUBLIC_INTERFACE
+export function formatAlertStatus(status) {
+  /**
+   * Formats internal alert status values (active|acknowledged|resolved|unknown) for UI display.
+   */
+  if (status === "acknowledged") return "Acknowledged";
+  if (status === "resolved") return "Resolved";
+  if (status === "active") return "Active";
+  return "N/A";
+}

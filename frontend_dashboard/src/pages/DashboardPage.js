@@ -13,7 +13,7 @@ import {
 } from "recharts";
 import { useAppState } from "../state/AppStateContext";
 import { buildBuckets, countByType } from "../utils/analytics";
-import { formatTimestamp } from "../utils/time";
+import { formatAlertStatus, formatTimestamp } from "../utils/time";
 
 function badgeClass(severity) {
   if (severity === "critical") return "badge critical";
@@ -32,12 +32,18 @@ function deviceStatusFromEvents(deviceId, events) {
   return "ok";
 }
 
+function alertStatusPillClass(status) {
+  if (status === "resolved") return "pill ok";
+  if (status === "acknowledged") return "pill";
+  return "pill";
+}
+
 // PUBLIC_INTERFACE
 export function DashboardPage() {
   /**
    * Dashboard page: device status overview, live alerts list, and activity charts.
    */
-  const { state } = useAppState();
+  const { state, actions } = useAppState();
 
   const deviceCards = useMemo(() => {
     return state.devices.map((d) => {
@@ -103,16 +109,46 @@ export function DashboardPage() {
               <div className="empty">No alerts in the last 30 minutes.</div>
             ) : (
               <ul className="alerts" aria-label="Recent alerts">
-                {recentAlerts.map((e) => (
-                  <li key={e.id} className="alert-row">
-                    <span className={badgeClass(e.severity)}>{e.severity.toUpperCase()}</span>
-                    <span className="alert-main">
-                      <span className="alert-device">{e.deviceName}</span>
-                      <span className="txt-muted"> — {e.message}</span>
-                    </span>
-                    <span className="alert-time mono">{formatTimestamp(e.ts)}</span>
-                  </li>
-                ))}
+                {recentAlerts.map((e) => {
+                  const status = state.alertStatusByEventId?.[e.id] || "active";
+                  return (
+                    <li key={e.id} className="alert-row">
+                      <span className={badgeClass(e.severity)}>{e.severity.toUpperCase()}</span>
+
+                      <span className="alert-main" title={`${e.deviceName} — ${e.message}`}>
+                        <span className="alert-device">{e.deviceName}</span>
+                        <span className="txt-muted"> — {e.message}</span>
+                      </span>
+
+                      <span className="alert-time mono">
+                        <div>{formatTimestamp(e.ts)}</div>
+                        <div style={{ marginTop: 6, display: "flex", gap: 8, justifyContent: "flex-end", flexWrap: "wrap" }}>
+                          <span className={alertStatusPillClass(status)}>{formatAlertStatus(status)}</span>
+                          <button
+                            className="btn btn-secondary"
+                            type="button"
+                            onClick={() => actions.acknowledgeAlert(e.id)}
+                            disabled={status === "acknowledged" || status === "resolved"}
+                            aria-disabled={status === "acknowledged" || status === "resolved"}
+                            title="Mark as acknowledged"
+                          >
+                            Ack
+                          </button>
+                          <button
+                            className="btn"
+                            type="button"
+                            onClick={() => actions.resolveAlert(e.id)}
+                            disabled={status === "resolved"}
+                            aria-disabled={status === "resolved"}
+                            title="Mark as resolved"
+                          >
+                            Resolve
+                          </button>
+                        </div>
+                      </span>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>
