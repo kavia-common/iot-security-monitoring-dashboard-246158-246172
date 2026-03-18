@@ -1,19 +1,40 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo } from "react";
 import { useAppState } from "../state/AppStateContext";
 import { formatTimestamp } from "../utils/time";
+
+function resolveValidSelectedId(devices, preferredId) {
+  if (!Array.isArray(devices) || devices.length === 0) return "";
+  if (preferredId && devices.some((d) => d.id === preferredId)) return preferredId;
+  return devices[0]?.id || "";
+}
 
 // PUBLIC_INTERFACE
 export function DevicesPage() {
   /**
    * Devices page: manage device availability and view/edit device metadata.
+   *
+   * WM-8117 bug fix:
+   * - Selected device persists across reloads via Context/localStorage (`state.selectedDeviceId`)
+   * - Safe fallback to first device if the stored id no longer exists
    */
   const { state, actions } = useAppState();
-  const [selectedId, setSelectedId] = useState(state.devices[0]?.id || "");
 
-  const selected = useMemo(
-    () => state.devices.find((d) => d.id === selectedId) || state.devices[0] || null,
-    [state.devices, selectedId]
-  );
+  // Ensure selectedDeviceId is always valid for the current devices list.
+  useEffect(() => {
+    const nextId = resolveValidSelectedId(state.devices, state.selectedDeviceId);
+    if (nextId && nextId !== state.selectedDeviceId) {
+      actions.setSelectedDeviceId(nextId);
+    }
+    // If no devices, ensure we don't keep stale selection around.
+    if (!nextId && state.selectedDeviceId) {
+      actions.setSelectedDeviceId("");
+    }
+  }, [state.devices, state.selectedDeviceId, actions]);
+
+  const selected = useMemo(() => {
+    const validId = resolveValidSelectedId(state.devices, state.selectedDeviceId);
+    return state.devices.find((d) => d.id === validId) || null;
+  }, [state.devices, state.selectedDeviceId]);
 
   return (
     <div className="page">
@@ -32,7 +53,7 @@ export function DevicesPage() {
                 <button
                   key={d.id}
                   className={`device-row ${selected?.id === d.id ? "selected" : ""}`}
-                  onClick={() => setSelectedId(d.id)}
+                  onClick={() => actions.setSelectedDeviceId(d.id)}
                   type="button"
                 >
                   <span className={`status-dot ${d.online ? "ok" : "offline"}`} aria-hidden="true" />
@@ -102,9 +123,7 @@ export function DevicesPage() {
                   </button>
                 </div>
 
-                <div className="hint">
-                  Note: simulation may also set the camera offline/online based on simulated events.
-                </div>
+                <div className="hint">Note: simulation may also set the camera offline/online based on simulated events.</div>
               </div>
             )}
           </div>

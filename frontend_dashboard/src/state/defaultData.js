@@ -52,6 +52,11 @@ function sanitizeAlertStatusByEventId(value) {
   return out;
 }
 
+function sanitizeSelectedDeviceId(value) {
+  if (typeof value !== "string") return "";
+  return value;
+}
+
 // PUBLIC_INTERFACE
 export function clampPersistedState(value) {
   /**
@@ -73,11 +78,15 @@ export function clampPersistedState(value) {
   // Alert lifecycle persistence: map of eventId -> status (active|acknowledged|resolved)
   const alertStatusByEventId = sanitizeAlertStatusByEventId(value.alertStatusByEventId);
 
+  // Devices page UI persistence: selected device id (validated at runtime against actual devices list)
+  const selectedDeviceId = sanitizeSelectedDeviceId(value.selectedDeviceId);
+
   return {
     theme,
     simulation,
     devices: devices || DEFAULT_DEVICES,
     events,
     alertStatusByEventId,
+    selectedDeviceId,
   };
 }

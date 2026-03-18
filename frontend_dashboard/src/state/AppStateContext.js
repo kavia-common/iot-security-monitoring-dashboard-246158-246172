@@ -28,6 +28,7 @@ function safeSave(state) {
       devices: state.devices,
       events: state.events,
       alertStatusByEventId: state.alertStatusByEventId,
+      selectedDeviceId: state.selectedDeviceId,
     };
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
   } catch {
@@ -44,6 +45,8 @@ function buildInitialState() {
     events: [],
     // Alert lifecycle: eventId -> status
     alertStatusByEventId: {},
+    // Devices page UI state (persisted): last selected device id.
+    selectedDeviceId: DEFAULT_DEVICES[0]?.id || "",
     toasts: [],
   };
 
@@ -72,6 +75,10 @@ function reducer(state, action) {
     }
     case "SET_SIMULATION": {
       return { ...state, simulation: { ...state.simulation, ...action.payload } };
+    }
+    case "SET_SELECTED_DEVICE": {
+      const { deviceId } = action.payload;
+      return { ...state, selectedDeviceId: deviceId };
     }
     case "TOGGLE_DEVICE_ONLINE": {
       const { deviceId } = action.payload;
@@ -169,6 +176,15 @@ export function AppStateProvider({ children }) {
     dispatch({ type: "UPDATE_DEVICE", payload: { deviceId, patch } });
   }, []);
 
+  // PUBLIC_INTERFACE
+  const setSelectedDeviceId = useCallback((deviceId) => {
+    /**
+     * Persisted UI state: sets the selected device id for the Devices page.
+     * Stored in Context and saved to localStorage alongside other app state.
+     */
+    dispatch({ type: "SET_SELECTED_DEVICE", payload: { deviceId } });
+  }, []);
+
   const simulateEvent = useCallback(() => {
     const current = stateRef.current;
     const { event, devicePatch, toast } = generateSimulatedEvent(current);
@@ -209,6 +225,7 @@ export function AppStateProvider({ children }) {
         simulateEvent,
         toggleDeviceOnline,
         updateDevice,
+        setSelectedDeviceId,
         setAlertStatus,
         acknowledgeAlert,
         resolveAlert,
@@ -223,6 +240,7 @@ export function AppStateProvider({ children }) {
     simulateEvent,
     toggleDeviceOnline,
     updateDevice,
+    setSelectedDeviceId,
     setAlertStatus,
     acknowledgeAlert,
     resolveAlert,
